@@ -33,9 +33,9 @@ static void dialog_render(Widget *self) { // 반환하는 값이 없으며, 이 
     printf("  <<Dialog #%d>> %s\n", self->id, self->label); // Dialog부분을 터미널에 render(Print)하며 받은 매개변수 안에있는 ID과 label을 출력.
 }
 
-static void widget_noop_event(Widget *self, int code) { (void)self; (void)code; } // Widget_noop_event라는 함수를 선언 후 아무런 작업도 하지 않는 이벤트 함수로 선언. ( 컴파일러에게 해당 함수에서 받는 self와 code는 일부러 사용하지 않는것이다. 라고 선언하며 경고를 방지. )
+static void widget_noop_event(Widget *self, int code) { (void)self; (void)code; } // Widget_noop_event라는 함수를 선언 후 아무런 작업도 하지 않는 이벤트 함수로 선언. (Widget타입의 특정 데이터 주소와 int타입의 code라는 값을 매개변수로 받음.) ( 컴파일러에게 해당 함수에서 받는 self와 code는 일부러 사용하지 않는것이다. 라고 선언하며 경고를 방지. )
 
-static void dialog_on_event(Widget *self, int code); // dialog_on_event라는 함수를 선언. 하지만 실제 함수 내에 코드는 아래에서 선언하기에 DIALOG_VT[Line 42]에 주소 지정을 위해 임시로 선언.
+static void dialog_on_event(Widget *self, int code); // dialog_on_event라는 함수를 선언. (Widget타입의 특정 데이터 주소와 int타입의 code라는 값을 매개변수로 받음.) 하지만 실제 함수 내에 코드는 아래에서 선언하기에 DIALOG_VT[Line 42]에 주소 지정을 위해 임시로 선언.
 
 static const VTable BUTTON_VT = { button_render, widget_noop_event }; // BUTTON_VT라는 데이터를 VTable이라는 타입으로 선언하며, button_render와 widget_noop_event 함수를 삽입. (여기서 widget_noop_event는 event가 필요없지만 타입으로 인해 삽입된 함수.)
 static const VTable LABEL_VT  = { label_render,  widget_noop_event }; // LABEL_VT라는 데이터를 VTable이라는 타입으로 선언하며, label_render와 widget_noop_event 함수를 삽입. (여기서 widget_noop_event는 event가 필요없지만 타입으로 인해 삽입된 함수.)
@@ -77,59 +77,75 @@ static void widget_destroy(Widget *w) {// 반환하는 값이 없으며, 이 파
 // C언어 표준상 w가 NULL일 때는 free()가 알아서 아무 동작도 안 하고 안전하게 넘어가므로 굳이 함수 내부에서 if (!w) 같은 예외 처리를 수동으로 해줄 필요가 없다.
 
 /* ── Screen ──────────────────────────────────────────────────── */
-static void screen_add(Screen *s, Widget *w) {
-    if (s->count < MAX_WIDGETS) s->items[s->count++] = w;
-}
+static void screen_add(Screen *s, Widget *w) { // 반환하는 값이 없으며, 이 파일에서만 참조할 수 있는 screen_add라는 함수를 선언 (Screen 타입의 s라는 포인터 주소, Widget 타입의 w라는 포인터 주소를 매개변수로 받는다.)
+    if (s->count < MAX_WIDGETS) s->items[s->count++] = w; // 만약 s->count보다 MAX_WIDGETS(8)이 더 크다면 s->items[s->count++]에 w 주소를 넣는다.
+    // 여기서 s->count보다 MAX_WIDGETS(8)이 더 크다면 이라는 조건은 한 screen에 8개의 widget이 들어갈 수 있다는 조건식으로 해석할 수 있다.
+    // s->items[s->count++]는 만약 현재 count가 0이라면 먼저 s->items[0]으로 대입하여 처리된 후 count++가 된다. 현재 count값을 사용하고 나서 count++하는 것과 같다.
+} // 현재 screen 내부 items은 widget이 8개가 들어갈 수 있도록 되어있다. 새로운 위젯을 현재 count 갯수 = widget의 갯수를 가지고 items에 삽입하는 함수이다.
 
-static void screen_dispatch(Screen *s, int code) {
-    for (int i = 0; i < s->count; i++) {
-        Widget *w = s->items[i];
-        w->vtbl->on_event(w, code);
+static void screen_dispatch(Screen *s, int code) {// 반환하는 값이 없으며, 이 파일에서만 참조할 수 있는 screen_dispatch라는 함수를 선언 (Screen 타입의 s라는 포인터 주소와 int타입의 code라는 데이터를 매개변수로 받는다.)
+    for (int i = 0; i < s->count; i++) {// s->count 갯수만큼 for문을 반복한다. 반복하며 i를 1씩 증가시킨다.
+        Widget *w = s->items[i]; // Widget 타입의 w라는 포인터변수(*)를 선언한다. w라는 포인터 변수에 s->items[i]의 주소를 넣는다.
+        w->vtbl->on_event(w, code);// 현재 w가 가리키고있는 widget의 vtbl에서 on_event라는 함수를 호출한다. 호출한 on_event엔 매개변수로 w라는 widget의 주소와 int타입의 code라는 데이터값을 넘긴다. (w를 매개변수로 넘기는 이유는 Line 9에서 widget을 받기 때문이며, 파이썬으로 보면 this와 유사하게 동작하게된다.)
+        // 여기서 on_event는 dialog_on_event, widget_noop_event이라는 함수를 뜻한다. [Line 36, 38]
     }
-}
+}// 현재 Screen에 있는 모든 widget을 돌아가며 on_event 함수를 실행하는 함수다.
 
-static void screen_render(Screen *s) {
-    for (int i = 0; i < s->count; i++) {
-        Widget *w = s->items[i];
-        w->vtbl->render(w);      
+static void screen_render(Screen *s) { // 반환하는 값이 없으며, 이 파일에서만 참조할 수 있는 screen_render라는 함수를 선언 (Screen 타입의 s라는 포인터 주소를 매개변수로 받는다.)
+    for (int i = 0; i < s->count; i++) { // s->count 갯수만큼 for문을 반복한다. 반복하며 i를 1씩 증가시킨다.
+        Widget *w = s->items[i]; // Widget 타입의 w라는 포인터변수(*)를 선언한다. w라는 포인터 변수에 s->items[i]의 주소를 넣는다.
+        w->vtbl->render(w); // 현재 w가 가리키고있는 widget의 vtbl에서 render라는 함수를 호출한다. 호출한 render엔 매개변수로 w라는 widget의 주소를 넘긴다. (w를 매개변수로 넘기는 이유는 Line 8에서 widget을 받기 때문이며, 파이썬으로 보면 this와 유사하게 동작하게된다. widget의 label과 같은 데이터를 출력하기 위함이다.)
+        // 여기서 render는 button_render, label_render, dialog_render이라는 함수를 뜻한다. 해당 함수를 호출하며 현재 w의 label 등등을 해당 함수에 코드에 맞게 출력하게된다.
     }
-}
+} // 현재 Screen에 있는 모든 widget을 돌아가며 해당 widget의 내용을 render함수를 통해 출력하는 함수다.
 
-static void dialog_on_event(Widget *self, int code) {
-    if (code == 1) {
-        self->closed = 1;
-        widget_destroy(self);   
+static void dialog_on_event(Widget *self, int code) { // 반환하는 값이 없으며, 이 파일에서만 참조할 수 있는 dialog_on_event라는 함수를 선언 (Widget타입의 특정 데이터 주소와 int타입의 code라는 값을 매개변수로 받음.) (Line 38 부분을 보면 안에 코드가 없는 dialog_on_event를 미리 선언한 것을 볼수있다. 현재 코드는 해당 함수에 코드를 채워넣는 선언이라고 볼 수 있다.)
+    if (code == 1) { // 만약 매개변수로 받은 code의 값이 1과 같다면 아래 코드를 실행한다.
+        self->closed = 1; // 매개변수로 받은 self라는 주소의 widget를 self->closed를 1로 바꾼다.
+        widget_destroy(self); // widget_destory라는 함수를 호출하며, 매개변수로 self라는 widget의 주소를 넘긴다.
     }
-}
+} // 만약 code가 1이라면 매개변수로 받은 widget을 closed = 1로 처리하고 할당된 해당 widget 데이터를 해제하는 함수를 호출한다.
 
-static char *app_build_status(const char *text) {
-    char *msg = malloc(sizeof(Widget));   
-    if (!msg) exit(1);
+static char *app_build_status(const char *text) { // char타입의 포인터 주소를 반환하며, 이 파일에서만 참조할 수 있는 app_build_status라는 함수를 선언
+    char *msg = malloc(sizeof(Widget));// char 타입의 msg라는 포인터변수(*)를 선언한다. 그리고 해당 포인터 변수에 malloc(sizeof (Widget))에서 return된 heap 메모리 주소를 넣는다. (Widget 구조체의 크기의 문자열을 할당했다고 보면된다. char로 포인터 변수의 타입을 잡았기 때문에 Widget이 40바이트라면 40바이트 길이의 문자열로 취급된다.)
+    if (!msg) exit(1);// msg가 없거나 값이 존재하지 않는다면 exit의 status 1을 넣어 프로그램을 종료한다.
 
-    memset(msg, 0xAB, sizeof(Widget));
-    snprintf(msg, sizeof(Widget), "STATUS: %s", text);
-    return msg;
-}
+    memset(msg, 0xAB, sizeof(Widget));// memset 함수를 선언하며, (msg, 0xAB, sizeof(Widget))이라는 매개변수를 전달한다.
+    //msg라는 주소를 시작으로 sizeof(Widget)만큼 0xAB를 채워넣는다.
+    //여기서 sizeof(Widget)은 컴파일시 숫자로 교체되며, msg에 Widget의 크기인 40으로 교체된다.
+    //msg라는 주소를 시작으로 40만큼 0xAB를 채워넣는다고 보면된다.
+    //하지만 여기서 memset 함수는 count만큼 0xAB를 덮어쓰기만 하고 \0값을 자동으로 넣어주지 않는다. 그렇기 때문에 종료지점을 찾지 못하고 msg를 참조하게 되면 에러가 날 가능성이 존재한다. (Missing String Termination, Buffer Over-read이 발생하며 Segmentation Fault 또는 다른 메모리 영역까지 유출될수있다.)
 
-int main(void) {
-    Screen s = { .count = 0 };
+    snprintf(msg, sizeof(Widget), "STATUS: %s", text);// snprintf라는 함수를 호출하여 msg, sizeof(Widget), "string", text를 매개변수로 넘긴다.
+    //snprintf는 출력을 하지 않는다. msg에서 ("STATUS: %s", text)를 대입한다. 거기서 최대크기를 sizeof(widget)로 가져가게된다.
+    // 만약 "STATUS: %s", text가 sizeof(Widget)보다 크다면 sizeof(Widget)에 맞게 잘려서 들어가게된다.
+    // [0xAB][0xAB][0xAB][0xAB][0xAB][0xAB][0xAB][0xAB][0xAB]...[0xAB]라는 현재 메모리 공간에서 [S][T][A][T][U][S][:][ ][text][\0]...[0xAB]가 실제 메모리 공간에 대입되는 것이다.
+    // 여기서 snprintf가 메모리에 특정 문자열을 대입하는 경우엔 \0값을 마지막에 자동으로 삽입하게된다. 그렇기때문에 \0을 임의로 넣어주지 않아도 된다.
+    // 그렇기 때문에 실제로 메모리 값을 참조할땐 \0이라는 종료지점까지 읽기때문에 실제로 뒤에있는 [0xAB]는 무시되게된다.
 
-    screen_add(&s, widget_new(&LABEL_VT,  10, "Welcome"));
-    screen_add(&s, widget_new(&BUTTON_VT, 11, "OK"));
-    screen_add(&s, widget_new(&DIALOG_VT, 12, "Are you sure?"));  /* items[2] */
-    screen_add(&s, widget_new(&BUTTON_VT, 13, "Cancel"));
+    return msg;// msg라는 주소를 반환한다.
+}// widget의 바이트 크기만큼의 문자열을 heap메모리 공간에 할당하며, 해당 메모리 공간에 widget 바이트 크기만큼 [0xAB]를 채워넣는다. 해당 메모리 공간에 STATUS: %s + \0을 대입하는 함수이다.
 
-    printf("frame 1:\n");
-    screen_render(&s);
-    screen_dispatch(&s, 1);
+int main(void) { // int를 반환하는 main 함수이다.
+    Screen s = { .count = 0 }; // Screen타입의 s라는 변수를 만들며, 안에있는 count에 0을 대입한다.
 
-    char *status = app_build_status("dialog closed");
-    printf("%s\n", status);
+    screen_add(&s, widget_new(&LABEL_VT,  10, "Welcome")); // screen_add라는 함수를 호출하며, &s라는 Screen의 주소와 widget_new의 return값인 widget의 주소를 매개변수로 넘긴다. (widget_new부분엔 Vtable과, id, label을 매개변수로 넘기며, 해당 값을 가지고 새로운 widget을 생성하고 리턴한다.)
+    screen_add(&s, widget_new(&BUTTON_VT, 11, "OK")); // screen_add라는 함수를 호출하며, &s라는 Screen의 주소와 widget_new의 return값인 widget의 주소를 매개변수로 넘긴다. (widget_new부분엔 Vtable과, id, label을 매개변수로 넘기며, 해당 값을 가지고 새로운 widget을 생성하고 리턴한다.)
+    screen_add(&s, widget_new(&DIALOG_VT, 12, "Are you sure?")); // screen_add라는 함수를 호출하며, &s라는 Screen의 주소와 widget_new의 return값인 widget의 주소를 매개변수로 넘긴다. (widget_new부분엔 Vtable과, id, label을 매개변수로 넘기며, 해당 값을 가지고 새로운 widget을 생성하고 리턴한다.)
+    screen_add(&s, widget_new(&BUTTON_VT, 13, "Cancel")); // screen_add라는 함수를 호출하며, &s라는 Screen의 주소와 widget_new의 return값인 widget의 주소를 매개변수로 넘긴다. (widget_new부분엔 Vtable과, id, label을 매개변수로 넘기며, 해당 값을 가지고 새로운 widget을 생성하고 리턴한다.)
+    // Welcome(LABEL), OK(BUTTON), Are you sure?(DIALOG), Cancel(BUTTON) 이라는 위젯을 s라는 스크린에 추가하는 부분이다.
 
-    printf("frame 2:\n");
-    screen_render(&s);           
+    printf("frame 1:\n"); // frame 1:을 출력한다.
+    screen_render(&s); // screen_render라는 함수를 호출하며, 현재 s라는 Screen의 주소를 매개변수로 넘긴다. (Screen 내부에 있는 모든 위젯을 render하는 함수다.)
+    screen_dispatch(&s, 1); // screen_dispatch라는 함수를 호출하며, 현재 s라는 Screen의 주소와 1을 매개변수로 넘긴다. (모든 widget을 돌아가며 on_event 함수를 실행하는 함수다.)
 
-    free(status);
-    for (int i = 0; i < s.count; i++) free(s.items[i]);
-    return 0;
+    char *status = app_build_status("dialog closed"); // char타입의 status라는 포인터 변수를 선언하며, app_build_status함수의 리턴값을 대입한다. ( 해당 함수에는 "dialog closed"를 매개변수로 넘긴다. )
+    printf("%s\n", status); // status를 printf로 출력한다.
+
+    printf("frame 2:\n"); // frame 2:을 출력한다.
+    screen_render(&s); // screen_render라는 함수를 호출하며, 현재 s라는 Screen의 주소를 매개변수로 넘긴다. (Screen 내부에 있는 모든 위젯을 render하는 함수다.)       
+
+    free(status); // status라는 주소의 할당된 공간을 free로 해제한다.
+    for (int i = 0; i < s.count; i++) free(s.items[i]); // 현재 s라는 Screen 내부에 있는 모든 위젯을 for문으로 돌아가며, free로 할당된 공간을 해제한다.
+    return 0; // 프로그램을 종료한다.
 }
