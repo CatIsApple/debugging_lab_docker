@@ -117,8 +117,7 @@ static void dialog_on_event(Widget *self, int code)
 static char *app_build_status(const char *text)
 {
     char *msg = malloc(sizeof(Widget));
-    if (!msg)
-        exit(1);
+    if (!msg) exit(1);
 
     memset(msg, 0xAB, sizeof(Widget));
     snprintf(msg, sizeof(Widget), "STATUS: %s", text);

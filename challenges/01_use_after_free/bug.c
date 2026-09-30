@@ -134,9 +134,7 @@ static char *app_build_status(const char *text)
     printf("[MALLOC-TRY] Status 구조체 할당 시도.\n");
     char *msg = malloc(sizeof(Widget));
     printf("[MALLOC-DONE] Status 구조체 할당 완료. 주소: %p\n", msg);
-    if (!msg)
-        printf("[MALLOC-ERROR] Status 할당 실패. 주소: %p\n", msg);
-    exit(1);
+    if (!msg) exit(1);
 
     memset(msg, 0xAB, sizeof(Widget));
     snprintf(msg, sizeof(Widget), "STATUS: %s", text);
@@ -182,9 +180,9 @@ int main(void)
     printf("frame 2:\n");
     screen_render(&s);
 
-    printf("[FREE_TRY] status 해제 시도. 내부 데이터: 0x%X", status, *status);
+    printf("[FREE_TRY] status 해제 시도. 내부 데이터: 0x%X", *status);
     free(status);
-    printf("[FREE_DONE] status 해제 완료. 내부 데이터: 0x%X", status, *status);
+    printf("[FREE_DONE] status 해제 완료. 내부 데이터: 0x%X", *status);
 
     for (int i = 0; i < s.count; i++)
         if (s.items[i]->closed == 0)
