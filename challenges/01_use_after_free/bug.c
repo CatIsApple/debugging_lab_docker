@@ -76,13 +76,11 @@ static Widget *widget_new(const VTable *vt, int id, const char *label)
     return w;
 }
 
-static void widget_destroy(Widget **w)
+static void widget_destroy(Widget *w)
 {
-
     printf("[FREE_TRY] Widget 해제 시도. 주소: %p\n", w);
-    free(*w);
-    printf("[FREE_DONE] Widget 해제 완료. 주소: %p\n", w);
-    *w = NULL;
+    free(w);
+    printf("[FREE_DONE] Widget 해제 완료.\n");
 }
 
 static void screen_add(Screen *s, Widget *w)
@@ -95,14 +93,21 @@ static void screen_dispatch(Screen *s, int code)
 {
     for (int i = 0; i < s->count; i++)
     {
-        Widget *w = s->items[i];
         // printf("screen_dispatch : %p\n", w);
         // if (i == 2)
         // {
         //     printf("%p\n", w->vtbl->on_event); /* code */
         // }
-
+        Widget *w = s->items[i];
+        if (!w)
+            continue;
         w->vtbl->on_event(w, code);
+        if (w->closed)
+        {
+            widget_destroy(w);
+            s->items[i] = NULL;
+        }
+
         // printf("screen_dispatch : %d\n", w->id);
     }
 }
@@ -112,10 +117,8 @@ static void screen_render(Screen *s)
     for (int i = 0; i < s->count; i++)
     {
         Widget *w = s->items[i];
-        if (w->closed == 0)
-        {
+        if (w)
             w->vtbl->render(w);
-        }
     }
 }
 
@@ -125,7 +128,6 @@ static void dialog_on_event(Widget *self, int code)
     {
         self->closed = 1;
         // printf("%d\n", self->closed);
-        widget_destroy(self);
     }
 }
 
@@ -134,7 +136,8 @@ static char *app_build_status(const char *text)
     printf("[MALLOC-TRY] Status 구조체 할당 시도.\n");
     char *msg = malloc(sizeof(Widget));
     printf("[MALLOC-DONE] Status 구조체 할당 완료. 주소: %p\n", msg);
-    if (!msg) exit(1);
+    if (!msg)
+        exit(1);
 
     memset(msg, 0xAB, sizeof(Widget));
     snprintf(msg, sizeof(Widget), "STATUS: %s", text);
@@ -180,9 +183,9 @@ int main(void)
     printf("frame 2:\n");
     screen_render(&s);
 
-    printf("[FREE_TRY] status 해제 시도. 내부 데이터: 0x%X", *status);
+    printf("[FREE_TRY] status 해제 시도. 내부 데이터: 0x%X\n", (unsigned int)(unsigned char)*status);
     free(status);
-    printf("[FREE_DONE] status 해제 완료. 내부 데이터: 0x%X", *status);
+    printf("[FREE_DONE] status 해제 완료.\n");
 
     for (int i = 0; i < s.count; i++)
         free(s.items[i]);

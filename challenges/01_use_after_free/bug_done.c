@@ -73,10 +73,9 @@ static Widget *widget_new(const VTable *vt, int id, const char *label)
     return w;
 }
 
-static void widget_destroy(Widget **w)
+static void widget_destroy(Widget *w)
 {
-    free(*w);
-    *w = NULL;
+    free(w);
 }
 
 static void screen_add(Screen *s, Widget *w)
@@ -90,7 +89,14 @@ static void screen_dispatch(Screen *s, int code)
     for (int i = 0; i < s->count; i++)
     {
         Widget *w = s->items[i];
+        if (!w)
+            continue;
         w->vtbl->on_event(w, code);
+        if (w->closed)
+        {
+            widget_destroy(w);
+            s->items[i] = NULL;
+        }
     }
 }
 
@@ -99,10 +105,8 @@ static void screen_render(Screen *s)
     for (int i = 0; i < s->count; i++)
     {
         Widget *w = s->items[i];
-        if (w->closed == 0)
-        {
+        if (w)
             w->vtbl->render(w);
-        }
     }
 }
 
@@ -111,14 +115,14 @@ static void dialog_on_event(Widget *self, int code)
     if (code == 1)
     {
         self->closed = 1;
-        widget_destroy(self);
     }
 }
 
 static char *app_build_status(const char *text)
 {
     char *msg = malloc(sizeof(Widget));
-    if (!msg) exit(1);
+    if (!msg)
+        exit(1);
 
     memset(msg, 0xAB, sizeof(Widget));
     snprintf(msg, sizeof(Widget), "STATUS: %s", text);
@@ -148,7 +152,6 @@ int main(void)
     free(status);
 
     for (int i = 0; i < s.count; i++)
-        if (s.items[i]->closed == 0)
-            free(s.items[i]);
+        free(s.items[i]);
     return 0;
 }
