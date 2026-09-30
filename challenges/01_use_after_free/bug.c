@@ -76,13 +76,13 @@ static Widget *widget_new(const VTable *vt, int id, const char *label)
     return w;
 }
 
-static void widget_destroy(Widget *w)
+static void widget_destroy(Widget **w)
 {
 
     printf("[FREE_TRY] Widget 해제 시도. 주소: %p\n", w);
-    free(w);
+    free(*w);
     printf("[FREE_DONE] Widget 해제 완료. 주소: %p\n", w);
-    // w = NULL;
+    *w = NULL;
 }
 
 static void screen_add(Screen *s, Widget *w)
@@ -185,7 +185,7 @@ int main(void)
     printf("[FREE_DONE] status 해제 완료. 내부 데이터: 0x%X", *status);
 
     for (int i = 0; i < s.count; i++)
-        if (s.items[i]->closed == 0)
-            free(s.items[i]);
+        free(s.items[i]);
+
     return 0;
 }

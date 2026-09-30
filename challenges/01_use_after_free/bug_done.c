@@ -73,9 +73,10 @@ static Widget *widget_new(const VTable *vt, int id, const char *label)
     return w;
 }
 
-static void widget_destroy(Widget *w)
+static void widget_destroy(Widget **w)
 {
-    free(w);
+    free(*w);
+    *w = NULL;
 }
 
 static void screen_add(Screen *s, Widget *w)
