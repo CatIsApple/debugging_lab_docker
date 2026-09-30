@@ -55,10 +55,13 @@ static const VTable DIALOG_VT = {dialog_render, dialog_on_event};
 
 static Widget *widget_new(const VTable *vt, int id, const char *label)
 {
+    printf("[MALLOC-TRY] Widget 구조체 할당 시도.\n");
     Widget *w = malloc(sizeof *w);
+    printf("[MALLOC-DONE] Widget 구조체 할당 완료. 주소: %p\n", w);
 
     if (!w)
     {
+        printf("[MALLOC-ERROR] Widget 구조체 할당 실패. 주소: %p\n", w);
         perror("malloc");
         exit(1);
     }
@@ -75,7 +78,10 @@ static Widget *widget_new(const VTable *vt, int id, const char *label)
 
 static void widget_destroy(Widget *w)
 {
+
+    printf("[FREE_TRY] Widget 해제 시도. 주소: %p\n", w);
     free(w);
+    printf("[FREE_DONE] Widget 해제 완료. 주소: %p\n", w);
     // w = NULL;
 }
 
@@ -125,12 +131,16 @@ static void dialog_on_event(Widget *self, int code)
 
 static char *app_build_status(const char *text)
 {
+    printf("[MALLOC-TRY] Status 구조체 할당 시도.\n");
     char *msg = malloc(sizeof(Widget));
+    printf("[MALLOC-DONE] Status 구조체 할당 완료. 주소: %p\n", msg);
     if (!msg)
-        exit(1);
+        printf("[MALLOC-ERROR] Status 할당 실패. 주소: %p\n", msg);
+    exit(1);
 
     memset(msg, 0xAB, sizeof(Widget));
     snprintf(msg, sizeof(Widget), "STATUS: %s", text);
+    printf("[STATUS] Text 삽입 완료. 주소: %p\n", msg);
 
     return msg;
 }
@@ -172,7 +182,10 @@ int main(void)
     printf("frame 2:\n");
     screen_render(&s);
 
+    printf("[FREE_TRY] status 해제 시도. 내부 데이터: 0x%X", status, *status);
     free(status);
+    printf("[FREE_DONE] status 해제 완료. 내부 데이터: 0x%X", status, *status);
+
     for (int i = 0; i < s.count; i++)
         if (s.items[i]->closed == 0)
             free(s.items[i]);
